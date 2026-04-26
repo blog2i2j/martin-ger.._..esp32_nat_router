@@ -68,6 +68,9 @@
 #include "syslog_client.h"
 #include "oled_display.h"
 #include "led_strip_status.h"
+#if !defined(CONFIG_IDF_TARGET_ESP32C5)
+#include "mdns.h"
+#endif
 #if CONFIG_MQTT_HOMEASSISTANT
 #include "mqtt_ha.h"
 #endif
@@ -1406,12 +1409,37 @@ void app_main(void)
     if (web_disabled == NULL) {
         web_disabled = param_set_default("0");
     }
+    int web_port_setting = 80;
     if (strcmp(web_disabled, "0") ==0) {
-        int web_port_setting = 80;
         get_config_param_int("web_port", &web_port_setting);
         ESP_LOGI(TAG,"Starting web server on port %d", web_port_setting);
         start_webserver((uint16_t)web_port_setting);
     }
+
+    // mDNS is disabled on ESP32-C5 to keep the image inside the app partition.
+#if !defined(CONFIG_IDF_TARGET_ESP32C5)
+    // Initialize mDNS responder. The espressif/mdns component, with the
+    // default predefined-netif config (STA/AP/ETH all enabled), automatically
+    // answers queries on whichever interface received them and replies with
+    // that interface's own IP address. So <hostname>.local resolves to the
+    // STA/ETH address from the uplink side and to the AP address from
+    // downstream clients with no per-netif binding code.
+    if (hostname && hostname[0]) {
+        esp_err_t merr = mdns_init();
+        if (merr == ESP_OK) {
+            mdns_hostname_set(hostname);
+            mdns_instance_name_set(hostname);
+            if (strcmp(web_disabled, "0") == 0) {
+                mdns_service_add(NULL, "_http", "_tcp",
+                                 (uint16_t)web_port_setting, NULL, 0);
+            }
+            ESP_LOGI(TAG, "mDNS responder up: %s.local", hostname);
+        } else {
+            ESP_LOGW(TAG, "mdns_init failed: %s", esp_err_to_name(merr));
+        }
+    }
+#endif
+
     free(web_disabled);
 
     // Initialize PCAP capture (TCP server on port 19000)
