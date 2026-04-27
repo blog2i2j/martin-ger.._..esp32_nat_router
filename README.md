@@ -49,7 +49,7 @@ The maximum number of simultaniously connected WiFi clients is 8 (5 on the ESP32
 After first boot the ESP32 NAT Router will offer a WiFi network with an open AP and the ssid "ESP32_NAT_Router". Configuration can either be done via a web interface or via the serial console.
 
 1. Connect to the **ESP32_NAT_Router** WiFi network
-2. Open **http://192.168.4.1** in your browser
+2. Open **http://esp32-nat-router.local** (or http://192.168.4.1) in your browser
 3. Configure your upstream WiFi and AP settings on the Getting Started page
 4. Click **Save & Reboot**
 
